@@ -1,63 +1,67 @@
 import { Plugin, registerPlugin } from 'enmity/managers/plugins';
-import { React, Messages } from 'enmity/metro/common';
-import { getByProps } from 'enmity/metro';
-import { create } from 'enmity/patcher';
-import { getBoolean } from 'enmity/api/settings';
+import { Messages, Dialog, Toasts } from 'enmity/metro/common';
+import { registerCommands, unregisterCommands, ApplicationCommandType, ApplicationCommandInputType, ApplicationCommandOptionType } from 'enmity/api/commands';
 import manifest from '../manifest.json';
-import Settings from './components/Settings';
 import { encryptMessage, decryptMessage } from './crypto';
-
-const Patcher = create('SecretMessage');
 
 const SecretMessage: Plugin = {
    ...manifest,
 
    onStart() {
-      const FluxDispatcher = getByProps('dispatch', 'subscribe');
-      if (FluxDispatcher) {
-          Patcher.before(FluxDispatcher, 'dispatch', (self, args) => {
-              const event = args[0];
-              if (!event) return;
-              
-              if (event.type === 'MESSAGE_CREATE' || event.type === 'MESSAGE_UPDATE') {
-                  if (event.message && typeof event.message.content === 'string') {
-                      event.message.content = decryptMessage(event.message.content);
-                  }
-              } else if (event.type === 'LOAD_MESSAGES_SUCCESS') {
-                  if (Array.isArray(event.messages)) {
-                      event.messages.forEach((m: any) => {
-                          if (m && typeof m.content === 'string') {
-                              m.content = decryptMessage(m.content);
-                          }
+      registerCommands('SecretMessage', [
+         {
+            id: 'secret-send-cmd',
+            name: 'gizli',
+            displayName: 'gizli',
+            description: 'Mesajınızı gizli Vencord diliyle (krd) gönderir.',
+            displayDescription: 'Mesajınızı gizli Vencord diliyle (krd) gönderir.',
+            type: ApplicationCommandType.Chat,
+            inputType: ApplicationCommandInputType.BuiltIn,
+            options: [
+               {
+                  name: 'mesaj',
+                  displayName: 'mesaj',
+                  description: 'Gizlenecek mesajınız',
+                  displayDescription: 'Gizlenecek mesajınız',
+                  type: ApplicationCommandOptionType.String,
+                  required: true
+               }
+            ],
+            execute: function (args, message) {
+               const textObj = args.find(a => a.name === 'mesaj');
+               if (textObj && textObj.value && message && message.channel_id) {
+                   const encrypted = encryptMessage(textObj.value);
+                   Messages.sendMessage(message.channel_id, { content: encrypted });
+               }
+            }
+         },
+         {
+            id: 'secret-translate-cmd',
+            name: 'Gizli Mesajı Çevir',
+            displayName: 'Gizli Mesajı Çevir',
+            description: 'Gelen gizli mesajı Türkçeye çevirir.',
+            displayDescription: 'Gelen gizli mesajı Türkçeye çevirir.',
+            type: ApplicationCommandType.Message,
+            execute: function (args, message) {
+               if (message && message.content) {
+                  const decrypted = decryptMessage(message.content);
+                  if (decrypted !== message.content) {
+                      Dialog.show({
+                          title: 'Gizli Mesaj',
+                          body: decrypted,
+                          confirmText: 'Kapat'
                       });
+                  } else {
+                      Toasts.open({ content: 'Bu mesaj gizli bir dil içermiyor.' });
                   }
-              }
-          });
-      }
-
-      Patcher.before(Messages, 'sendMessage', (self, args) => {
-          if (getBoolean('SecretMessage', 'enabled', false) && args[1] && typeof args[1].content === 'string') {
-              if (args[1].content.startsWith('*')) {
-                  args[1].content = encryptMessage(args[1].content.slice(1));
-              }
-          }
-      });
-
-      Patcher.before(Messages, 'editMessage', (self, args) => {
-          if (getBoolean('SecretMessage', 'enabled', false) && args[2] && typeof args[2].content === 'string') {
-              if (args[2].content.startsWith('*')) {
-                  args[2].content = encryptMessage(args[2].content.slice(1));
-              }
-          }
-      });
+               }
+            }
+         }
+      ]);
    },
 
    onStop() {
-      Patcher.unpatchAll();
-   },
-
-   getSettingsPanel({ settings }) {
-      return <Settings settings={settings} />;
+      unregisterCommands('SecretMessage');
    }
 };
 
