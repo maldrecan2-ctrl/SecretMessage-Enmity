@@ -1,11 +1,11 @@
 {
    "name": "SecretMessage",
-   "version": "1.0.5",
+   "version": "1.0.6",
    "description": "Send secret message that only your friend can understand.",
    "authors": [
       {
-         "name": "mafu",
-         "id": "519760564755365888"
+         "name": "rolex7exe",
+         "id": "460344197849808897"
       }
    ],
    "color": "#008b8b"
