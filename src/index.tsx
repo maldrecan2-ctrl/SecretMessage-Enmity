@@ -48,14 +48,18 @@ const SecretMessage: Plugin = {
       }
 
       Patcher.before(Messages, 'sendMessage', (self, args) => {
-          if (getBoolean('SecretMessage', 'enabled', false) && args[1] && args[1].content) {
-              args[1].content = encryptMessage(args[1].content);
+          if (getBoolean('SecretMessage', 'enabled', false) && args[1] && typeof args[1].content === 'string') {
+              if (args[1].content.startsWith('*')) {
+                  args[1].content = encryptMessage(args[1].content.slice(1));
+              }
           }
       });
 
       Patcher.before(Messages, 'editMessage', (self, args) => {
-          if (getBoolean('SecretMessage', 'enabled', false) && args[2] && args[2].content) {
-              args[2].content = encryptMessage(args[2].content);
+          if (getBoolean('SecretMessage', 'enabled', false) && args[2] && typeof args[2].content === 'string') {
+              if (args[2].content.startsWith('*')) {
+                  args[2].content = encryptMessage(args[2].content.slice(1));
+              }
           }
       });
    },
