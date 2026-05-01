@@ -1,40 +1,33 @@
 import { Plugin, registerPlugin } from 'enmity/managers/plugins';
 import { Messages, Dialog, Toasts } from 'enmity/metro/common';
-import { registerCommands, unregisterCommands, ApplicationCommandType, ApplicationCommandInputType, ApplicationCommandOptionType } from 'enmity/api/commands';
+import { registerCommands, unregisterCommands, ApplicationCommandType } from 'enmity/api/commands';
+import { create } from 'enmity/patcher';
 import manifest from '../manifest.json';
 import { encryptMessage, decryptMessage } from './crypto';
+
+const Patcher = create('SecretMessage');
 
 const SecretMessage: Plugin = {
    ...manifest,
 
    onStart() {
+      Patcher.before(Messages, 'sendMessage', (self, args) => {
+          if (args[1] && typeof args[1].content === 'string') {
+              if (args[1].content.startsWith('*')) {
+                  args[1].content = encryptMessage(args[1].content.slice(1));
+              }
+          }
+      });
+
+      Patcher.before(Messages, 'editMessage', (self, args) => {
+          if (args[2] && typeof args[2].content === 'string') {
+              if (args[2].content.startsWith('*')) {
+                  args[2].content = encryptMessage(args[2].content.slice(1));
+              }
+          }
+      });
+
       registerCommands('SecretMessage', [
-         {
-            id: 'secret-send-cmd',
-            name: 'gizli',
-            displayName: 'gizli',
-            description: 'Mesajınızı gizli Vencord diliyle (krd) gönderir.',
-            displayDescription: 'Mesajınızı gizli Vencord diliyle (krd) gönderir.',
-            type: ApplicationCommandType.Chat,
-            inputType: ApplicationCommandInputType.BuiltIn,
-            options: [
-               {
-                  name: 'mesaj',
-                  displayName: 'mesaj',
-                  description: 'Gizlenecek mesajınız',
-                  displayDescription: 'Gizlenecek mesajınız',
-                  type: ApplicationCommandOptionType.String,
-                  required: true
-               }
-            ],
-            execute: function (args, message) {
-               const textObj = args.find(a => a.name === 'mesaj');
-               if (textObj && textObj.value && message && message.channel_id) {
-                   const encrypted = encryptMessage(textObj.value);
-                   Messages.sendMessage(message.channel_id, { content: encrypted });
-               }
-            }
-         },
          {
             id: 'secret-translate-cmd',
             name: 'Gizli Mesajı Çevir',
@@ -61,6 +54,7 @@ const SecretMessage: Plugin = {
    },
 
    onStop() {
+      Patcher.unpatchAll();
       unregisterCommands('SecretMessage');
    }
 };
