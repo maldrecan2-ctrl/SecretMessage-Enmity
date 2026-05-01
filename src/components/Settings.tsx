@@ -9,8 +9,8 @@ interface SettingsProps {
 export default ({ settings }: SettingsProps) => {
    return <>
       <FormInput
-         title="Key"
-         placeholder="Input key you shared with your friend"
+         title="Gizli Şifre (Key)"
+         placeholder="Arkadaşınızla paylaştığınız ortak şifreyi girin"
          value={settings.get('key', 'default') as string}
          onChange={(value: any) => {
             const text = typeof value === 'string' ? value : value?.nativeEvent?.text;
@@ -18,8 +18,8 @@ export default ({ settings }: SettingsProps) => {
          }}
       />
       <FormRow
-         label='Enable encryption'
-         subLabel='Enable to automatically encrypt outgoing messages and show encrypted placeholders.'
+         label='Şifrelemeyi Etkinleştir'
+         subLabel='Açtığınızda göndereceğiniz mesajlar otomatik olarak şifrelenir.'
          trailing={
             <FormSwitch
                value={settings.getBoolean('enabled', false)}
@@ -28,8 +28,8 @@ export default ({ settings }: SettingsProps) => {
          }
       />
       <FormRow
-         label='Auto shorten text'
-         subLabel='Shorten encrypted text by replacing specific char.'
+         label='Metni Otomatik Kısalt'
+         subLabel='Şifrelenmiş metni özel karakterlerle değiştirerek kısaltır.'
          trailing={
             <FormSwitch
                value={settings.getBoolean('shorten_text', true)}
