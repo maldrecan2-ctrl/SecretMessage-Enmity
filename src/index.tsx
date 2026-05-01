@@ -38,10 +38,11 @@ const SecretMessage: Plugin = {
               if (getBoolean('SecretMessage', 'auto_decrypt', true)) {
                   if (event.type === 'MESSAGE_CREATE' || event.type === 'MESSAGE_UPDATE') {
                       if (event.message && typeof event.message.content === 'string') {
-                          if (!event.message.content.includes('\n*(')) {
+                          if (!event.message.content.includes('\n-# ')) {
                               const decrypted = decryptMessage(event.message.content);
                               if (decrypted !== event.message.content) {
-                                  event.message.content = `${event.message.content}\n*(${decrypted})*`;
+                                  const formatted = decrypted.split('\n').map((line: string) => `-# ${line}`).join('\n');
+                                  event.message.content = `${event.message.content}\n\n${formatted}`;
                               }
                           }
                       }
@@ -49,10 +50,11 @@ const SecretMessage: Plugin = {
                       if (Array.isArray(event.messages)) {
                           event.messages.forEach((m: any) => {
                               if (m && typeof m.content === 'string') {
-                                  if (!m.content.includes('\n*(')) {
+                                  if (!m.content.includes('\n-# ')) {
                                       const decrypted = decryptMessage(m.content);
                                       if (decrypted !== m.content) {
-                                          m.content = `${m.content}\n*(${decrypted})*`;
+                                          const formatted = decrypted.split('\n').map((line: string) => `-# ${line}`).join('\n');
+                                          m.content = `${m.content}\n\n${formatted}`;
                                       }
                                   }
                               }
