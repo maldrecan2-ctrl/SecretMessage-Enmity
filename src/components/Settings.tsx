@@ -9,12 +9,12 @@ interface SettingsProps {
 export default ({ settings }: SettingsProps) => {
    return <>
       <FormRow
-         label='Şifrelemeyi Etkinleştir (Vencord Uyumlu)'
-         subLabel='Açtığınızda göndereceğiniz mesajlar otomatik olarak gizli Vencord diline (krd) çevrilir.'
+         label='Gelen Mesajları Otomatik Çevir'
+         subLabel='Açık olduğunda, karşıdan gelen tüm "krd" gizli mesajları anında Türkçeye çevrilir.'
          trailing={
             <FormSwitch
-               value={settings.getBoolean('enabled', false)}
-               onValueChange={(value: boolean) => settings.set('enabled', value)}
+               value={settings.getBoolean('auto_decrypt', true)}
+               onValueChange={(value: boolean) => settings.set('auto_decrypt', value)}
             />
          }
       />

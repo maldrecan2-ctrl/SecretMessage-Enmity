@@ -1,8 +1,9 @@
 import { Plugin, registerPlugin } from 'enmity/managers/plugins';
-import { Messages, Dialog, Toasts } from 'enmity/metro/common';
-import { unregisterCommands, ApplicationCommandType } from 'enmity/api/commands';
-import { getModule } from 'enmity/metro';
+import { React, Messages } from 'enmity/metro/common';
+import { getByProps } from 'enmity/metro';
 import { create } from 'enmity/patcher';
+import { getBoolean } from 'enmity/api/settings';
+import Settings from './components/Settings';
 import manifest from '../manifest.json';
 import { encryptMessage, decryptMessage } from './crypto';
 
@@ -28,59 +29,37 @@ const SecretMessage: Plugin = {
           }
       });
 
-      const MessageActionSheet = getModule(m => m.default?.name === 'MessageLongPressActionSheet' || m.default?.name === 'MessageActionSheet' || m.default?.name === 'MessageContextMenu');
-      
-      if (MessageActionSheet) {
-          Patcher.after(MessageActionSheet, 'default', (self, args, res) => {
-              const message = args[0]?.message;
-              if (!message || !message.content) return res;
-
-              const decrypted = decryptMessage(message.content);
-              if (decrypted === message.content) return res; // not encrypted
-
-              const { TouchableOpacity, Text, View } = window.enmity.components || {};
-              // Fallback inline styling for the button if FormRow isn't ideal
-              const TranslateButton = (
-                 <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' }}>
-                     <Text style={{ color: '#008b8b', fontSize: 16, fontWeight: 'bold' }} onPress={() => {
-                         Dialog.show({
-                             title: 'Gizli Mesaj',
-                             body: decrypted,
-                             confirmText: 'Kapat'
-                         });
-                     }}>
-                         🔓 Gizli Mesajı Çevir
-                     </Text>
-                 </View>
-              );
-
-              // Resilient injection into the React tree
-              const inject = (tree: any): boolean => {
-                  if (!tree) return false;
-                  if (Array.isArray(tree)) {
-                      tree.unshift(TranslateButton);
-                      return true;
-                  }
-                  if (tree.props && tree.props.children) {
-                      if (Array.isArray(tree.props.children)) {
-                          tree.props.children.unshift(TranslateButton);
-                          return true;
-                      } else {
-                          return inject(tree.props.children);
+      const FluxDispatcher = getByProps('dispatch', 'subscribe');
+      if (FluxDispatcher) {
+          Patcher.before(FluxDispatcher, 'dispatch', (self, args) => {
+              const event = args[0];
+              if (!event) return;
+              
+              if (getBoolean('SecretMessage', 'auto_decrypt', true)) {
+                  if (event.type === 'MESSAGE_CREATE' || event.type === 'MESSAGE_UPDATE') {
+                      if (event.message && typeof event.message.content === 'string') {
+                          event.message.content = decryptMessage(event.message.content);
+                      }
+                  } else if (event.type === 'LOAD_MESSAGES_SUCCESS') {
+                      if (Array.isArray(event.messages)) {
+                          event.messages.forEach((m: any) => {
+                              if (m && typeof m.content === 'string') {
+                                  m.content = decryptMessage(m.content);
+                              }
+                          });
                       }
                   }
-                  return false;
-              };
-
-              inject(res);
-              return res;
+              }
           });
       }
    },
 
    onStop() {
       Patcher.unpatchAll();
-      unregisterCommands('SecretMessage');
+   },
+
+   getSettingsPanel({ settings }) {
+      return <Settings settings={settings} />;
    }
 };
 
