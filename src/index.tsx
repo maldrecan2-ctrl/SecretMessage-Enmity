@@ -1,5 +1,6 @@
 import { Plugin, registerPlugin } from 'enmity/managers/plugins';
-import { React, Messages, Dispatcher } from 'enmity/metro/common';
+import { React, Messages } from 'enmity/metro/common';
+import { getByProps } from 'enmity/metro';
 import { create } from 'enmity/patcher';
 import { getBoolean } from 'enmity/api/settings';
 import manifest from '../manifest.json';
@@ -12,39 +13,26 @@ const SecretMessage: Plugin = {
    ...manifest,
 
    onStart() {
-      const nodes = Dispatcher._actionHandlers?._dependencyGraph?.nodes || Dispatcher._dependencyGraph?.nodes;
-      let MessageStoreActionHandler: any;
-      if (nodes) {
-         const keys = Object.keys(nodes);
-         for (const key of keys) {
-            if (nodes[key].name === 'MessageStore') {
-               MessageStoreActionHandler = nodes[key].actionHandler;
-               break;
-            }
-         }
-      }
-
-      if (MessageStoreActionHandler) {
-         Patcher.before(MessageStoreActionHandler, 'LOAD_MESSAGES_SUCCESS', (self, args) => {
-             if (args[0] && args[0].messages) {
-                 args[0].messages = args[0].messages.map((m: any) => {
-                     if (m.content) m.content = decryptMessage(m.content);
-                     return m;
-                 });
-             }
-         });
-
-         Patcher.before(MessageStoreActionHandler, 'MESSAGE_CREATE', (self, args) => {
-             if (args[0] && args[0].message && args[0].message.content) {
-                 args[0].message.content = decryptMessage(args[0].message.content);
-             }
-         });
-
-         Patcher.before(MessageStoreActionHandler, 'MESSAGE_UPDATE', (self, args) => {
-             if (args[0] && args[0].message && args[0].message.content) {
-                 args[0].message.content = decryptMessage(args[0].message.content);
-             }
-         });
+      const FluxDispatcher = getByProps('dispatch', 'subscribe');
+      if (FluxDispatcher) {
+          Patcher.before(FluxDispatcher, 'dispatch', (self, args) => {
+              const event = args[0];
+              if (!event) return;
+              
+              if (event.type === 'MESSAGE_CREATE' || event.type === 'MESSAGE_UPDATE') {
+                  if (event.message && typeof event.message.content === 'string') {
+                      event.message.content = decryptMessage(event.message.content);
+                  }
+              } else if (event.type === 'LOAD_MESSAGES_SUCCESS') {
+                  if (Array.isArray(event.messages)) {
+                      event.messages.forEach((m: any) => {
+                          if (m && typeof m.content === 'string') {
+                              m.content = decryptMessage(m.content);
+                          }
+                      });
+                  }
+              }
+          });
       }
 
       Patcher.before(Messages, 'sendMessage', (self, args) => {
