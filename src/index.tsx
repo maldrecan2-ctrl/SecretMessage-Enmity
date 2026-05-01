@@ -41,7 +41,7 @@ const SecretMessage: Plugin = {
                           if (!event.message.content.includes('(Türkçe Çevirisi)')) {
                               const decrypted = decryptMessage(event.message.content);
                               if (decrypted !== event.message.content) {
-                                  event.message.content = `${event.message.content}\n**${decrypted}**\n*(Türkçe Çevirisi)*`;
+                                  event.message.content = `${event.message.content}\n**${decrypted}**\n\n(Türkçe Çevirisi)`;
                               }
                           }
                       }
@@ -52,7 +52,7 @@ const SecretMessage: Plugin = {
                                   if (!m.content.includes('(Türkçe Çevirisi)')) {
                                       const decrypted = decryptMessage(m.content);
                                       if (decrypted !== m.content) {
-                                          m.content = `${m.content}\n**${decrypted}**\n*(Türkçe Çevirisi)*`;
+                                          m.content = `${m.content}\n**${decrypted}**\n\n(Türkçe Çevirisi)`;
                                       }
                                   }
                               }
