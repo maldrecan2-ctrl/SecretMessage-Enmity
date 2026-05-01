@@ -1,91 +1,91 @@
-import { get, getBoolean } from 'enmity/api/settings';
+const X1 = "krd";
+const X2 = "1978";
 
-const Y = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-const PLUGIN_NAME = "SecretMessage";
+const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
 
-export function xor(e: string, t: string) {
-    let n = "";
-    for (let r = 0; r < e.length; r++) {
-        n += String.fromCharCode(e.charCodeAt(r) ^ t.charCodeAt(r % t.length));
-    }
-    return n;
-}
-
-export function getKeySignature(e: string) {
-    return `${xor("secret", e).slice(0, 3).padStart(3, "?")}`;
-}
-
-export function getEditMarker(e: string) {
-    return `\`<${e.slice(0, 2)}${"*".repeat(Math.max(e.length - 2, 0))}>\``;
-}
-
-function insertAt(e: string, t: number, n: string) {
-    return `${e.slice(0, t)}${n}${e.slice(t)}`;
-}
-
-function removeAt(e: string, t: number) {
-    return `${e.slice(0, t)}${e.slice(t + 1)}`;
-}
-
-function randomChar() {
-    return Y[Math.floor(Math.random() * Y.length)];
-}
-
-export function unshorten(e: string) {
-    return e.replaceAll("\u2004", "\r").replaceAll("\u2001", "\n").replaceAll("\u2002", "\v").replaceAll("\u2003", "\f");
-}
-
-export function shorten(e: string) {
-    return getBoolean(PLUGIN_NAME, "shorten_text", true)
-        ? e.replaceAll("\v", "\u2002").replaceAll("\f", "\u2003").replaceAll("\r", "\u2004").replaceAll("\n", "\u2001")
-        : e;
-}
-
-export function encryptMessage(e: string) {
-    let key = get(PLUGIN_NAME, "key", "default") as string;
-    let n = shorten(xor(e, key));
-    let r = Math.floor(n.length / 3);
-    let s = getKeySignature(key);
-    
-    if (r === 0) {
-        n = `${s}${n}`;
-    } else {
-        [3, 2, 1].forEach(a => {
-            n = insertAt(n, r * a - 1, s[a - 1]);
-        });
-    }
-    return `${randomChar()}${randomChar()}${n}${randomChar()}${randomChar()}`;
-}
-
-export function extractPayload(e: string, signature: string) {
-    let n = 2;
-    if (e.length <= 9) {
-        if (e.slice(2, 5) === signature) return e.slice(5, -2);
-    } else {
-        let r = Math.floor((e.length - n * 2 - 3) / 3);
-        let s = `${e[r - 1 + (1 - 1) + n]}${e[r * 2 - 1 + (2 - 1) + n]}${e[r * 3 - 1 + (3 - 1) + n]}`;
-        e = e.slice(2, -2);
-        if (signature === s) {
-            [3, 2, 1].forEach(a => {
-                e = removeAt(e, r * a - 1 + (a - 1));
-            });
-            return e;
+function safeBtoa(input: string) {
+    if (typeof btoa !== 'undefined') return btoa(input);
+    let str = input;
+    let output = '';
+    for (let block = 0, charCode, i = 0, map = chars; str.charAt(i | 0) || (map = '=', i % 1); output += map.charAt(63 & block >> 8 - i % 1 * 8)) {
+        charCode = str.charCodeAt(i += 3/4);
+        if (charCode > 0xFF) {
+            throw new Error("'btoa' failed: The string to be encoded contains characters outside of the Latin1 range.");
         }
+        block = block << 8 | charCode;
     }
-    return false;
+    return output;
 }
 
-export function decryptMessage(e: string) {
-    let key = get(PLUGIN_NAME, "key", "default") as string;
-    let signature = getKeySignature(key);
-    let editMarker = getEditMarker(key);
-    let payload = extractPayload(e, signature);
+function safeAtob(input: string) {
+    if (typeof atob !== 'undefined') return atob(input);
+    let str = input.replace(/=+$/, '');
+    let output = '';
+    if (str.length % 4 == 1) {
+        throw new Error("'atob' failed: The string to be decoded is not correctly encoded.");
+    }
+    for (let bc = 0, bs = 0, buffer, i = 0; buffer = str.charAt(i++); ~buffer && (bs = bc % 4 ? bs * 64 + buffer : buffer, bc++ % 4) ? output += String.fromCharCode(255 & bs >> (-2 * bc & 6)) : 0) {
+        buffer = chars.indexOf(buffer);
+    }
+    return output;
+}
+
+function xorEncryptDecrypt(input: string): string {
+    const key = unescape(encodeURIComponent(X2));
+    const data = unescape(encodeURIComponent(input));
+    let binary = "";
+    for (let i = 0; i < data.length; i++) {
+        binary += String.fromCharCode(data.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+    }
+    return safeBtoa(binary);
+}
+
+function xorDecrypt(base64: string): string | null {
+    try {
+        const binary = safeAtob(base64);
+        const key = unescape(encodeURIComponent(X2));
+        let decodedBytes = "";
+        for (let i = 0; i < binary.length; i++) {
+            decodedBytes += String.fromCharCode(binary.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+        }
+        return decodeURIComponent(escape(decodedBytes));
+    } catch {
+        return null;
+    }
+}
+
+function toBase64Url(input: string) {
+    return xorEncryptDecrypt(input)
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/g, "");
+}
+
+function fromBase64Url(input: string) {
+    const normalized = input
+        .replace(/-/g, "+")
+        .replace(/_/g, "/");
+    const padLength = (4 - normalized.length % 4) % 4;
+    const padded = normalized + "=".repeat(padLength);
+    return xorDecrypt(padded);
+}
+
+export function encryptMessage(content: string) {
+    return `${X1}${toBase64Url(content)}`;
+}
+
+export function decryptMessage(content: string) {
+    let cleanContent = content;
     
-    return payload ? `${xor(unshorten(payload), key)} ${editMarker}` : e;
-}
+    if (cleanContent.startsWith("||") && cleanContent.endsWith("||")) {
+        cleanContent = cleanContent.slice(2, -2).trim();
+    }
+    
+    if (!cleanContent.startsWith(X1)) return content;
 
-export function cleanEditMarker(e: string) {
-    let key = get(PLUGIN_NAME, "key", "default") as string;
-    let editMarker = getEditMarker(key);
-    return e.replace(editMarker, "");
+    const body = cleanContent.slice(X1.length).trim();
+    if (!body) return content;
+    
+    const decoded = fromBase64Url(body);
+    return decoded !== null ? decoded : content;
 }
