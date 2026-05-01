@@ -38,13 +38,23 @@ const SecretMessage: Plugin = {
               if (getBoolean('SecretMessage', 'auto_decrypt', true)) {
                   if (event.type === 'MESSAGE_CREATE' || event.type === 'MESSAGE_UPDATE') {
                       if (event.message && typeof event.message.content === 'string') {
-                          event.message.content = decryptMessage(event.message.content);
+                          if (!event.message.content.includes('**🔓 Çeviri:**')) {
+                              const decrypted = decryptMessage(event.message.content);
+                              if (decrypted !== event.message.content) {
+                                  event.message.content = `${event.message.content}\n\n**🔓 Çeviri:**\n${decrypted}`;
+                              }
+                          }
                       }
                   } else if (event.type === 'LOAD_MESSAGES_SUCCESS') {
                       if (Array.isArray(event.messages)) {
                           event.messages.forEach((m: any) => {
                               if (m && typeof m.content === 'string') {
-                                  m.content = decryptMessage(m.content);
+                                  if (!m.content.includes('**🔓 Çeviri:**')) {
+                                      const decrypted = decryptMessage(m.content);
+                                      if (decrypted !== m.content) {
+                                          m.content = `${m.content}\n\n**🔓 Çeviri:**\n${decrypted}`;
+                                      }
+                                  }
                               }
                           });
                       }
