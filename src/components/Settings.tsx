@@ -1,14 +1,13 @@
 import { FormRow, FormSwitch, FormInput } from 'enmity/components';
 import { SettingsStore } from 'enmity/api/settings';
 import { React } from 'enmity/metro/common';
-import { ScrollView } from 'react-native';
 
 interface SettingsProps {
    settings: SettingsStore;
 }
 
 export default ({ settings }: SettingsProps) => {
-   return <ScrollView>
+   return <>
       <FormInput
          title="Key"
          placeholder="Input key you shared with your friend"
@@ -35,5 +34,5 @@ export default ({ settings }: SettingsProps) => {
             />
          }
       />
-   </ScrollView>;
+   </>;
 };
