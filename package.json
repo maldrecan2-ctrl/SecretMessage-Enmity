@@ -3,7 +3,7 @@
    "description": "Send secret message that only your friend can understand.",
    "version": "1.0.4",
    "license": "GPL-3.0",
-   "author": "mafu",
+   "author": "rolex7exe",
    "scripts": {
       "build": "rollup -c --configPlugin esbuild"
    },
