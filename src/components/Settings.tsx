@@ -12,7 +12,10 @@ export default ({ settings }: SettingsProps) => {
          title="Key"
          placeholder="Input key you shared with your friend"
          value={settings.get('key', 'default') as string}
-         onChange={(text) => settings.set('key', text)}
+         onChange={(value: any) => {
+            const text = typeof value === 'string' ? value : value?.nativeEvent?.text;
+            if (text !== undefined) settings.set('key', text);
+         }}
       />
       <FormRow
          label='Enable encryption'
@@ -20,7 +23,7 @@ export default ({ settings }: SettingsProps) => {
          trailing={
             <FormSwitch
                value={settings.getBoolean('enabled', false)}
-               onValueChange={() => settings.toggle('enabled')}
+               onValueChange={(value: boolean) => settings.set('enabled', value)}
             />
          }
       />
@@ -30,7 +33,7 @@ export default ({ settings }: SettingsProps) => {
          trailing={
             <FormSwitch
                value={settings.getBoolean('shorten_text', true)}
-               onValueChange={() => settings.toggle('shorten_text')}
+               onValueChange={(value: boolean) => settings.set('shorten_text', value)}
             />
          }
       />
