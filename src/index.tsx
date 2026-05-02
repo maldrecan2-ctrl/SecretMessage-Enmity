@@ -9,6 +9,24 @@ import { encryptMessage, decryptMessage } from './crypto';
 
 const Patcher = create('SecretMessage');
 
+const decryptEmbeds = (embeds: any[]) => {
+    if (!Array.isArray(embeds)) return;
+    embeds.forEach((embed) => {
+        if (embed.rawDescription && typeof embed.rawDescription === 'string' && !embed.rawDescription.includes('\n-# (')) {
+            const decrypted = decryptMessage(embed.rawDescription);
+            if (decrypted !== embed.rawDescription) {
+                embed.rawDescription = `${embed.rawDescription}\n-# (${decrypted})`;
+                if (embed.description) embed.description = `${embed.description}\n-# (${decrypted})`;
+            }
+        } else if (embed.description && typeof embed.description === 'string' && !embed.description.includes('\n-# (')) {
+            const decrypted = decryptMessage(embed.description);
+            if (decrypted !== embed.description) {
+                embed.description = `${embed.description}\n-# (${decrypted})`;
+            }
+        }
+    });
+};
+
 const SecretMessage: Plugin = {
    ...manifest,
 
@@ -45,6 +63,9 @@ const SecretMessage: Plugin = {
                               }
                           }
                       }
+                      if (event.message && event.message.embeds) {
+                          decryptEmbeds(event.message.embeds);
+                      }
                   } else if (event.type === 'LOAD_MESSAGES_SUCCESS') {
                       if (Array.isArray(event.messages)) {
                           event.messages.forEach((m: any) => {
@@ -55,6 +76,9 @@ const SecretMessage: Plugin = {
                                           m.content = `${m.content}\n-# (${decrypted})`;
                                       }
                                   }
+                              }
+                              if (m && m.embeds) {
+                                  decryptEmbeds(m.embeds);
                               }
                           });
                       }
